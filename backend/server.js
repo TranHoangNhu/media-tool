@@ -12,8 +12,6 @@ const multer = require("multer");
 const { PDFDocument } = require("pdf-lib");
 const cron = require("node-cron");
 
-const cron = require("node-cron");
-
 const app = express();
 const PORT = process.env.PORT || 1108;
 
