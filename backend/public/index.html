@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Clone - Tour Image Downloader</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-cloud-arrow-down"></i> Photo Clone</h1>
+            <p>Trích xuất ảnh chất lượng cao từ lịch trình tour</p>
+        </header>
+
+        <main>
+            <div class="search-box">
+                <input type="text" id="urlInput" placeholder="Dán đường link tour du lịch vào đây..."
+                    autocomplete="off">
+                <button id="scanBtn" onclick="scanImages()">
+                    <i class="fa-solid fa-bolt"></i> Quét Ảnh
+                </button>
+            </div>
+
+            <div id="status" class="status"></div>
+
+            <div class="actions" id="actionPanel" style="display: none;">
+                <div class="selection-info">
+                    Đã tìm thấy <span id="count">0</span> ảnh
+                </div>
+                <!-- Drive Upload Section -->
+                <div class="drive-section"
+                    style="width: 100%; margin-top: 15px; display: flex; flex-direction: column; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 10px;">
+                    <div style="display:flex; gap:10px;">
+                        <!-- Updated to use config -->
+                        <input type="text" id="clientIdInput" placeholder="Google Client ID (đã có trong config.js)"
+                            style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9em;">
+                        <button id="authBtn" onclick="handleAuth()"
+                            style="background: #4285f4; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer;">
+                            <i class="fa-brands fa-google"></i> Kết nối
+                        </button>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="driveUrlInput" placeholder="Dán link Google Drive folder..."
+                            style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
+                        <button class="drive-btn" onclick="uploadToDrive()"
+                            style="background: #0f9d58; color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                            disabled>
+                            <i class="fa-brands fa-google-drive"></i> Upload
+                        </button>
+                    </div>
+                    <div id="authStatus" style="font-size: 0.85em; color: #666;">Chưa kết nối Google</div>
+                </div>
+
+                <button class="download-btn" onclick="downloadAll()" style="width: 100%; margin-top: 10px;">
+                    <i class="fa-solid fa-file-zipper"></i> Tải Về Tất Cả (.ZIP)
+                </button>
+            </div>
+
+            <div id="gallery" class="gallery"></div>
+        </main>
+
+        <footer>
+            <p>Designed for <a href="http://tranhoangnhu.website/">Nhu Web</a></p>
+        </footer>
+    </div>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
