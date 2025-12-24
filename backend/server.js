@@ -26,7 +26,11 @@ const jobQueue = [];
 
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGIN || "*", // Allow all or restrict to Frontend Vercel Domain
+    origin: [
+      "https://tranhoangnhu.website",
+      "https://media.tranhoangnhu.website",
+      "http://localhost:3000",
+    ],
     methods: ["GET", "POST"],
   })
 );
