@@ -1,82 +1,101 @@
-# Google Declaration Portal (Hệ Thống Khai Báo & Xử Lý Ảnh)
+# Media Processing Application (Hệ Thống Xử Lý Đa Phương Tiện)
 
-Dự án website hỗ trợ vận hành, xử lý hình ảnh tour và tài liệu PDF, được xây dựng với kiến trúc hiện đại **Frontend (Next.js)** và **Backend (Express)**.
+Dự án cung cấp bộ công cụ xử lý media chuyên dụng cho vận hành tour và marketing, với kiến trúc tách biệt **Frontend (Next.js)** và **Backend (Node.js/Express)** để tối ưu hiệu suất và khả năng mở rộng.
+
+## 🌐 Kiến Trúc Triển Khai
+
+- **Frontend**: [https://tranhoangnhu.website](https://tranhoangnhu.website)
+  - Deploy trên **Vercel**.
+  - Giao diện người dùng, kết nối tới Backend thông qua Proxy hoặc API trực tiếp.
+- **Backend API**: [https://api-nextjs.tranhoangnhu.website](https://api-nextjs.tranhoangnhu.website)
+  - Deploy trên **iNET** (Node.js App).
+  - Xử lý các tác vụ nặng: Nén video, Xử lý ảnh (Watermark/Resize), Ghép PDF.
+  - Sử dụng **Job Queue** để kiểm soát tài nguyên server.
+
+---
 
 ## 🚀 Tính Năng Chính
 
-### 1. Tìm & Xử Lý Ảnh Tour (`/find-image`)
+### 1. Nén Video (`/compress-video`) 🎬
 
-- Quét ảnh tự động từ URL bài viết tour (website du lịch).
-- **Tự động đóng dấu Logo** (Watermark) vào giữa ảnh.
-- Chuyển đổi định dạng sang **WebP** để tối ưu dung lượng.
-- Tải về trọn bộ (file ZIP) hoặc **Upload trực tiếp lên Google Drive**.
-- Hỗ trợ xác thực OAuth2 với Google Drive cá nhân.
+- **Cơ chế Job Queue**: Chỉ xử lý 1 video cùng một lúc để tránh quá tải Server (CPU/RAM).
+- **Tuỳ chọn nén**:
+  - Giới hạn dung lượng đích (Target Size in MB).
+  - Web Optimized (Fast Start).
+  - Resize thông minh (Full HD, HD).
+- Hỗ trợ tải file ZIP cho nhiều video.
 
-### 2. Ghép File PDF (`/merge-pdf`)
+### 2. Tìm & Xử Lý Ảnh Tour (`/find-image`) 🖼️
 
-- Cho phép upload và ghép nhiều file PDF thành một văn bản duy nhất.
-- **Hỗ trợ file lớn**: Đã cấu hình lên tới **100MB**.
-- Xử lý thông minh: Dùng cơ chế **Streaming Proxy** giúp upload file lớn mượt mà qua mạng LAN mà không bị lỗi bộ nhớ.
-- Tự động dọn dẹp file tạm sau khi xử lý.
+- Quét ảnh từ URL chương trình tour.
+- **Tự động đóng dấu Logo** (Watermark) vào giữa ảnh (độ mờ 30%).
+- Chuyển đổi sang **WebP** và Resize (Max width 1500px).
+- Upload trực tiếp lên **Google Drive** cá nhân.
+
+### 3. Ghép File PDF (`/merge-pdf`) 📄
+
+- Upload và ghép nhiều file PDF thành một.
+- Hỗ trợ file lớn (Stream Processing).
+
+### 4. Hệ Thống Tự Động ⚙️
+
+- **Auto Cleanup**: Server tự động quét và xóa các file tạm (`uploads/`) cũ hơn 1 tiếng sau mỗi 30 phút để giải phóng ổ cứng.
+- **CORS Security**: Backend chỉ chấp nhận requests từ Frontend chính chủ.
 
 ---
 
-## 🛠 Cài Đặt & Khởi Chạy
+## 🛠 Cài Đặt & Chạy Local
 
-Bạn cần mở 2 cửa sổ Terminal (dòng lệnh) để chạy song song cả Backend và Frontend.
+Để phát triển trên máy cá nhân, bạn cần chạy song song cả 2 dịch vụ.
 
-### Bước 1: Khởi động Backend (Server Xử Lý)
+### 1. Backend
 
-Backend chạy tại port `1108`, chịu trách nhiệm xử lý logic nặng (Resize ảnh, Merge PDF).
+Chịu trách nhiệm xử lý logic (Port 1108).
 
 ```bash
 cd backend
-npm install       # Cài đặt thư viện (chỉ làm lần đầu)
-node server.js    # Khởi động server
+npm install
+node server.js
 ```
 
-_Màn hình hiện: `Server running at http://localhost:1108` là thành công._
+_Backend sẽ chạy tại: `http://localhost:1108`_
 
-### Bước 2: Khởi động Frontend (Giao Diện Web)
+### 2. Frontend
 
-Frontend chạy tại port `3000`, cung cấp giao diện người dùng.
+Giao diện người dùng (Port 3000).
 
 ```bash
 cd frontend
-npm install       # Cài đặt thư viện (chỉ làm lần đầu)
-npm run dev       # Khởi động chế độ Development
+npm install
+npm run dev
 ```
 
-_Truy cập website tại:_ `http://localhost:3000`
+_Truy cập: `http://localhost:3000`_
 
 ---
 
-## ⚙️ Cấu Hình Nâng Cao
+## 📦 Hướng Dẫn Deploy
 
-### 1. Truy cập qua mạng LAN (Cho kế toán/nhân viên khác)
+### 1. Deploy Frontend (Vercel)
 
-Hệ thống đã được cấu hình để cho phép truy cập từ các máy khác trong cùng mạng LAN.
+- Kết nối GitHub Repository.
+- Cấu hình Environment Variables (nếu cần, hiện tại đã hardcode domain backend cho ổn định).
+- Framework Preset: **Next.js**.
 
-- **Backend**: Đã mở CORS cho mọi nguồn.
-- **Frontend**: Người dùng khác truy cập bằng IP của máy chủ, ví dụ: `http://192.168.1.165:3000`.
+### 2. Deploy Backend (iNET / VPS)
 
-### 2. Xử Lý File Lớn (PDF Merge)
+- Nén thư mục `backend` thành file `.zip` (**Lưu ý**: Loại bỏ folder `node_modules`).
+- Upload lên Server (cấu hình Node.js App trên cPanel/iNET).
+- Entry point: `server.js`.
+- Bấm **Install NPM Packages** và **Start App**.
 
-- Hệ thống sử dụng cơ chế **Disk Storage** (lưu tạm vào ổ cứng) thay vì RAM để tránh tràn bộ nhớ khi ghép nhiều file.
-- Giới hạn upload hiện tại: **100MB**.
-- Nếu gặp lỗi kết nối, hãy đảm bảo Backend đang chạy.
+---
 
-### 3. Cấu Trúc Dự Án
+## 📝 Cấu Trúc Thư Mục
 
-- `backend/`: Chứa code Express Server.
-  - `uploads/`: Thư mục tạm chứa file PDF khi merge (tự động xóa sau khi xong).
-  - `server.js`: File chính.
-- `frontend/`: Chứa code Next.js 15.
-  - `src/app/api/merge-pdf/route.ts`: Proxy đặc biệt để stream file lớn sang backend.
-  - `next.config.ts`: Cấu hình bảo mật và IP cho phép.
-
-## 📝 Ghi Chú
-
-- Khi cần cập nhật giao diện, chỉ cần sửa trong `frontend`.
-- Khi cần sửa logic xử lý ảnh/pdf, sửa trong `backend`.
-- **Luôn đảm bảo Backend chạy trước Frontend.**
+- `backend/`
+  - `server.js`: Core logic, Queue, API Routes.
+  - `uploads/`: Thư mục lưu trữ tạm (được dọn dẹp tự động).
+- `frontend/`
+  - `src/app/`: Next.js App Router Pages.
+  - `next.config.ts`: Cấu hình Proxy & Routing.
