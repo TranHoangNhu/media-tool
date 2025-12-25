@@ -16,6 +16,9 @@ export default function CompressVideoPage() {
   const [status, setStatus] = useState("");
   const [outputBlobUrl, setOutputBlobUrl] = useState(null);
 
+  // Silent audio to keep browser tab active in background
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const load = async () => {
     setIsLoadingCore(true);
 
@@ -47,7 +50,7 @@ export default function CompressVideoPage() {
         ),
       });
       setLoaded(true);
-      setStatus("FFmpeg đã sẵn sàng!");
+      setStatus("Sẵn sàng! (Sử dụng CPU của bạn để xử lý)");
     } catch (e) {
       console.error(e);
       setStatus(
@@ -60,11 +63,29 @@ export default function CompressVideoPage() {
 
   useEffect(() => {
     load();
+    // Create silent audio element
+    const audio = new Audio(
+      "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAgZGF0YQAAAAA="
+    );
+    audio.loop = true;
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+    };
   }, []);
 
   const compress = async () => {
     if (!videoFile || !loaded || !ffmpegRef.current) return;
-    setStatus("Đang nén video... Vui lòng chờ");
+
+    // 1. Play silent audio to trick browser into keeping tab active
+    if (audioRef.current) {
+      audioRef.current
+        .play()
+        .catch((e) => console.log("Audio autoplay failed", e));
+    }
+
+    setStatus("Đang nén video... Đừng đóng tab (Tab có thể chạy ẩn).");
     setProgress(0);
 
     const { fetchFile } = await import("@ffmpeg/util");
@@ -75,15 +96,21 @@ export default function CompressVideoPage() {
 
     await ffmpeg.writeFile(inputName, await fetchFile(videoFile));
 
+    // Command Optimization
+    // -crf 30: Higher compression (default ~23). Range 0-51. 30 is good for web.
+    // -preset veryfast: Good balance of speed vs size (ultrafast is too big)
+    // -an: Remove audio? No, let's keep it.
     await ffmpeg.exec([
       "-i",
       inputName,
       "-vcodec",
       "libx264",
       "-crf",
-      "28",
+      "32", // Aggressive compression
       "-preset",
-      "ultrafast",
+      "superfast", // Faster than veryfast, better than ultrafast
+      "-movflags",
+      "+faststart", // Combine for web optimization
       outputName,
     ]);
 
@@ -93,6 +120,11 @@ export default function CompressVideoPage() {
     );
     setOutputBlobUrl(url);
     setStatus("Nén thành công!");
+
+    // Stop audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
   };
 
   return (
