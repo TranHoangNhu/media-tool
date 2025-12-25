@@ -146,24 +146,40 @@ export default function FindImagePage() {
       return alert("Google Sign-In chưa tải xong, vui lòng thử lại");
 
     setIsConnecting(true);
+    setStatus("Đang mở popup xác thực...");
+
     try {
       const client = google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: "https://www.googleapis.com/auth/drive.file",
         callback: (resp) => {
+          console.log("Google OAuth callback:", resp);
           setIsConnecting(false);
+
+          if (resp.error) {
+            console.error("OAuth Error:", resp.error);
+            setStatus(`❌ Lỗi: ${resp.error_description || resp.error}`);
+            return;
+          }
+
           if (resp.access_token) {
             setAccessToken(resp.access_token);
-            setStatus("✅ Đã kết nối Google Drive!");
+            setStatus("✅ Đã kết nối Google Drive thành công!");
           } else {
-            setStatus("❌ Kết nối thất bại");
+            setStatus("❌ Không nhận được access token");
           }
+        },
+        error_callback: (err) => {
+          console.error("OAuth error_callback:", err);
+          setIsConnecting(false);
+          setStatus(`❌ Lỗi OAuth: ${err.type || "popup_closed_by_user"}`);
         },
       });
       client.requestAccessToken();
     } catch (e) {
+      console.error("OAuth exception:", e);
       setIsConnecting(false);
-      setStatus("❌ Lỗi kết nối: " + e.message);
+      setStatus("❌ Lỗi: " + e.message);
     }
   };
 
