@@ -15,6 +15,7 @@ export default function CompressVideoPage() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [outputBlobUrl, setOutputBlobUrl] = useState(null);
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Silent audio to keep browser tab active in background
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -83,6 +84,8 @@ export default function CompressVideoPage() {
   const compress = async () => {
     if (!videoFile || !loaded || !ffmpegRef.current) return;
 
+    setIsCompressing(true);
+
     // 1. Play silent audio to trick browser into keeping tab active
     if (audioRef.current) {
       audioRef.current
@@ -99,36 +102,42 @@ export default function CompressVideoPage() {
     const inputName = "input.mp4";
     const outputName = "output.mp4";
 
-    await ffmpeg.writeFile(inputName, await fetchFile(videoFile));
+    try {
+      await ffmpeg.writeFile(inputName, await fetchFile(videoFile));
 
-    // Command Optimization
-    // -crf 30: Higher compression (default ~23). Range 0-51. 30 is good for web.
-    // -preset veryfast: Good balance of speed vs size (ultrafast is too big)
-    // -an: Remove audio? No, let's keep it.
-    await ffmpeg.exec([
-      "-i",
-      inputName,
-      "-vcodec",
-      "libx264",
-      "-crf",
-      "32", // Aggressive compression
-      "-preset",
-      "superfast", // Faster than veryfast, better than ultrafast
-      "-movflags",
-      "+faststart", // Combine for web optimization
-      outputName,
-    ]);
+      // Command Optimization
+      // -crf 30: Higher compression (default ~23). Range 0-51. 30 is good for web.
+      // -preset veryfast: Good balance of speed vs size (ultrafast is too big)
+      // -an: Remove audio? No, let's keep it.
+      await ffmpeg.exec([
+        "-i",
+        inputName,
+        "-vcodec",
+        "libx264",
+        "-crf",
+        "32", // Aggressive compression
+        "-preset",
+        "superfast", // Faster than veryfast, better than ultrafast
+        "-movflags",
+        "+faststart", // Combine for web optimization
+        outputName,
+      ]);
 
-    const data = await ffmpeg.readFile(outputName);
-    const url = URL.createObjectURL(
-      new Blob([data.buffer], { type: "video/mp4" })
-    );
-    setOutputBlobUrl(url);
-    setStatus("Nén thành công!");
-
-    // Stop audio
-    if (audioRef.current) {
-      audioRef.current.pause();
+      const data = await ffmpeg.readFile(outputName);
+      const url = URL.createObjectURL(
+        new Blob([data.buffer], { type: "video/mp4" })
+      );
+      setOutputBlobUrl(url);
+      setStatus("Nén thành công!");
+    } catch (e) {
+      console.error(e);
+      setStatus("Lỗi trong quá trình nén video.");
+    } finally {
+      setIsCompressing(false);
+      // Stop audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
     }
   };
 
