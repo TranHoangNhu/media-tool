@@ -3,228 +3,296 @@
 import { useState } from "react";
 import Script from "next/script";
 import Link from "next/link";
+import JSZip from "jszip";
+
+// --- CLIENT-SIDE PROCESSING LOGIC ---
+async function processImageClientSide(
+  imageUrl: string,
+  watermarkUrl: string
+): Promise<Blob | null> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous"; // Important for Canvas
+    // Use our proxy to avoid CORS issues
+    img.src = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      // Target Width
+      const TARGET_WIDTH = 1500;
+      const scale = TARGET_WIDTH / img.width;
+      canvas.width = TARGET_WIDTH;
+      canvas.height = img.height * scale;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(null);
+        return;
+      }
+
+      // Draw Resized Image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Draw Watermark
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = watermarkUrl; // Assuming this allows CORS or served from same domain
+
+      logo.onload = () => {
+        const logoWidth = canvas.width * 0.4; // 40% width
+        const logoScale = logoWidth / logo.width;
+        const logoHeight = logo.height * logoScale;
+
+        // Center
+        const x = (canvas.width - logoWidth) / 2;
+        const y = (canvas.height - logoHeight) / 2;
+
+        ctx.globalAlpha = 0.3; // 30% Opacity
+        ctx.drawImage(logo, x, y, logoWidth, logoHeight);
+        ctx.globalAlpha = 1.0;
+
+        // Export WebP
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob);
+          },
+          "image/webp",
+          0.75
+        );
+      };
+
+      logo.onerror = () => {
+        // If logo fails, just resolve image
+        canvas.toBlob((blob) => resolve(blob), "image/webp", 0.75);
+      };
+    };
+
+    img.onerror = () => resolve(null); // Skip error images
+  });
+}
 
 export default function FindImagePage() {
   const [url, setUrl] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedBlobs, setProcessedBlobs] = useState<Blob[]>([]);
+
+  // Drive State
   const [driveUrl, setDriveUrl] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [tokenClient, setTokenClient] = useState<any>(null);
   const [clientId, setClientId] = useState("");
 
-  const BACKEND_URL = ""; // Use relative path for proxy
-
   const scanImages = async () => {
-    if (!url) {
-      setStatus("Vui lòng nhập đường dẫn URL!");
-      return;
-    }
-
+    if (!url) return setStatus("Vui lòng nhập URL!");
     setLoading(true);
-    setStatus("Đang phân tích trang web...");
+    setStatus("Đang quét...");
     setImages([]);
+    setProcessedBlobs([]);
 
     try {
-      const res = await fetch(
-        `${BACKEND_URL}/api/scrape?url=${encodeURIComponent(url)}`
-      );
+      const res = await fetch(`/api/scrape?url=${encodeURIComponent(url)}`);
       const data = await res.json();
-
-      if (data.images && data.images.length > 0) {
+      if (data.images?.length > 0) {
         setImages(data.images);
-        setStatus(`Tìm thấy ${data.images.length} ảnh.`);
+        setStatus(`Tìm thấy ${data.images.length} ảnh. Sẵn sàng xử lý.`);
       } else {
-        setStatus("Không tìm thấy ảnh nào trong phần chương trình tour.");
+        setStatus("Không tìm thấy ảnh.");
       }
-    } catch (error) {
-      console.error(error);
-      setStatus(
-        "Có lỗi xảy ra khi tải dữ liệu. Hãy đảm bảo Server Backend đang chạy (Port 1108)."
-      );
+    } catch (e) {
+      setStatus("Lỗi khi quét ảnh.");
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadAll = async () => {
-    if (images.length === 0) return;
-    setStatus("Đang nén ảnh (xử lý server)...");
+  const processAllImagesHelper = async () => {
+    if (images.length === 0) return null;
+    setIsProcessing(true);
+    setStatus("Đang xử lý ảnh (Resize & Watermark)... vui lòng không tắt tab.");
 
-    try {
-      const jsonImages = JSON.stringify(images);
-      const res = await fetch(
-        `${BACKEND_URL}/api/download-zip?images=${encodeURIComponent(
-          jsonImages
-        )}`
+    const blobs: Blob[] = [];
+    // Watermark URL (hardcoded for now, or fetch via proxy if needed)
+    // We use a direct link if it allows CORS, or proxy it.
+    // Ideally put logo in public folder.
+    const LOGO_URL = "https://happybooktravel.com/logo-footer.svg";
+    // Proxy the logo too just in case
+    const PROXY_LOGO = `/api/proxy-image?url=${encodeURIComponent(LOGO_URL)}`;
+
+    for (let i = 0; i < images.length; i++) {
+      setStatus(
+        `Đang xử lý ảnh ${i + 1}/${images.length} (${Math.round(
+          ((i + 1) / images.length) * 100
+        )}%)`
       );
-      if (!res.ok) throw new Error("Download failed");
-
-      const blob = await res.blob();
-      const tempUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = tempUrl;
-      a.download = "tour-photos.zip";
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(tempUrl);
-      a.remove();
-      setStatus("Tải xuống thành công!");
-    } catch (err: any) {
-      setStatus("Lỗi tải xuống: " + err.message);
+      const blob = await processImageClientSide(images[i], PROXY_LOGO);
+      if (blob) blobs.push(blob);
     }
+    setProcessedBlobs(blobs);
+    setIsProcessing(false);
+    setStatus(`Xử lý xong ${blobs.length} ảnh! Đã lưu vào bộ nhớ trình duyệt.`);
+    return blobs;
   };
 
-  const handleAuth = () => {
-    if (!clientId) {
-      alert("Vui lòng nhập Google Client ID!");
-      return;
+  const downloadZip = async () => {
+    let blobs = processedBlobs;
+    if (blobs.length === 0) {
+      blobs = (await processAllImagesHelper()) || [];
     }
+    if (blobs.length === 0) return;
 
-    if (typeof window !== "undefined" && (window as any).google) {
-      const client = (window as any).google.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: "https://www.googleapis.com/auth/drive.file",
-        callback: (tokenResponse: any) => {
-          if (tokenResponse.access_token) {
-            setAccessToken(tokenResponse.access_token);
-            setStatus("Đã kết nối Google Drive! Sẵn sàng upload.");
-          }
-        },
-      });
-      setTokenClient(client);
-      client.requestAccessToken();
-    }
+    setStatus("Đang tạo file ZIP...");
+    const zip = new JSZip();
+    blobs.forEach((blob, i) => {
+      zip.file(`image_${i + 1}.webp`, blob);
+    });
+
+    const content = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(content);
+    a.download = "images_processed.zip";
+    a.click();
+    setStatus("Đã tải xuống!");
+  };
+
+  // --- GOOGLE DRIVE UPLOAD (CLIENT-SIDE) ---
+  const handleAuth = () => {
+    if (!clientId) return alert("Nhập Client ID");
+    // @ts-ignore
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      scope: "https://www.googleapis.com/auth/drive.file",
+      callback: (resp: any) => {
+        if (resp.access_token) {
+          setAccessToken(resp.access_token);
+          setStatus("Đã kết nối Drive!");
+        }
+      },
+    });
+    client.requestAccessToken();
   };
 
   const uploadToDrive = async () => {
-    if (!images.length || !driveUrl || !accessToken) return;
-    setStatus("Đang upload lên Drive...");
-
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/upload-drive`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images, driveUrl, accessToken }),
-      });
-      const result = await res.json();
-      if (res.ok) {
-        setStatus(`Upload thành công ${result.count} ảnh!`);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (err: any) {
-      setStatus("Lỗi Upload: " + err.message);
+    if (!driveUrl || !accessToken) return alert("Thiếu thông tin Drive");
+    let blobs = processedBlobs;
+    if (blobs.length === 0) {
+      blobs = (await processAllImagesHelper()) || [];
     }
+    if (blobs.length === 0) return;
+
+    // Extract Folder ID
+    const match = driveUrl.match(/folders\/([a-zA-Z0-9_-]+)/);
+    const folderId = match ? match[1] : null;
+
+    if (!folderId) return alert("Link Folder không hợp lệ");
+
+    setStatus("Đang upload lên Drive...");
+    let count = 0;
+
+    for (let i = 0; i < blobs.length; i++) {
+      setStatus(`Uploading ${i + 1}/${blobs.length}...`);
+      const blob = blobs[i];
+      const metadata = {
+        name: `image_${i + 1}.webp`,
+        parents: [folderId],
+      };
+
+      const form = new FormData();
+      form.append(
+        "metadata",
+        new Blob([JSON.stringify(metadata)], { type: "application/json" })
+      );
+      form.append("file", blob);
+
+      try {
+        await fetch(
+          "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: form,
+          }
+        );
+        count++;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    setStatus(`Upload hoàn tất ${count}/${blobs.length} ảnh!`);
   };
 
   return (
     <div className="min-h-screen p-8 bg-[var(--background)]">
-      <Script
-        src="https://accounts.google.com/gsi/client"
-        strategy="afterInteractive"
-      />
-
+      <Script src="https://accounts.google.com/gsi/client" />
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <Link
-            href="/"
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            ← Quay lại Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-pink-500">
-            Tìm & Xử Lý Ảnh Tour
-          </h1>
-          <div className="w-8"></div>
-        </div>
+        <Link href="/" className="text-gray-400">
+          ← Quay lại
+        </Link>
+        <h1 className="text-3xl font-bold my-4">
+          Tìm & Xử Lý Ảnh (Client-side)
+        </h1>
 
-        {/* Input Section */}
         <div className="glass-panel p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="Nhập đường dẫn URL tour..."
-              className="input-field flex-1"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && scanImages()}
-            />
-            <button
-              onClick={scanImages}
-              disabled={loading}
-              className="primary-btn whitespace-nowrap min-w-[120px]"
-            >
-              {loading ? "Đang quét..." : "Tìm Ảnh"}
-            </button>
-          </div>
-
-          {
-            // Show status
-            status && (
-              <div className="text-blue-300 font-medium animate-pulse">
-                {status}
-              </div>
-            )
-          }
+          <input
+            className="input-field w-full mb-4"
+            placeholder="URL Tour..."
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <button
+            onClick={scanImages}
+            disabled={loading}
+            className="primary-btn"
+          >
+            {loading ? "Đang quét..." : "Tìm Ảnh"}
+          </button>
+          <div className="mt-2 text-blue-400">{status}</div>
         </div>
 
-        {/* Auth & Actions Section */}
         {images.length > 0 && (
-          <div className="glass-panel p-6 mb-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            {/* Left: Actions */}
-            <div className="flex flex-col gap-4">
-              <h3 className="text-xl font-semibold mb-2">Thao tác</h3>
-              <div className="flex gap-4">
+          <div className="glass-panel p-6 mb-8 grid md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-xl mb-4">Thao tác</h3>
+              <button
+                onClick={downloadZip}
+                disabled={isProcessing}
+                className="primary-btn w-full mb-2 bg-green-600"
+              >
+                {isProcessing ? "Đang xử lý..." : "Tải ZIP (Xử lý ngay)"}
+              </button>
+
+              {accessToken && (
                 <button
-                  onClick={downloadAll}
-                  className="primary-btn flex-1 bg-gradient-to-r from-green-500 to-emerald-600"
+                  onClick={uploadToDrive}
+                  disabled={isProcessing}
+                  className="primary-btn w-full bg-blue-600"
                 >
-                  Download ZIP
+                  Upload lên Drive
                 </button>
-                {accessToken && (
-                  <button
-                    onClick={uploadToDrive}
-                    className="primary-btn flex-1 bg-gradient-to-r from-blue-600 to-indigo-600"
-                  >
-                    Upload Drive
-                  </button>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Right: Drive Config */}
-            <div className="flex flex-col gap-3 p-4 bg-slate-900/50 rounded-xl border border-slate-700">
-              <h3 className="text-lg font-semibold text-gray-300">
-                Cấu hình Google Drive
-              </h3>
+            <div className="p-4 bg-slate-900 rounded">
+              <h3 className="mb-2">Google Drive Connect</h3>
               {!accessToken ? (
-                <div className="flex gap-2">
+                <>
                   <input
-                    type="text"
-                    placeholder="Google Client ID"
-                    className="input-field text-sm"
+                    className="input-field w-full mb-2 text-sm"
+                    placeholder="Client ID"
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                   />
-                  <button
-                    onClick={handleAuth}
-                    className="primary-btn text-sm py-2"
-                  >
+                  <button onClick={handleAuth} className="primary-btn text-xs">
                     Kết nối
                   </button>
-                </div>
+                </>
               ) : (
-                <div className="flex items-center gap-2 text-green-400">
-                  <span>● Đã kết nối với Google</span>
-                </div>
+                <div className="text-green-400">● Đã kết nối</div>
               )}
-
               <input
-                type="text"
-                placeholder="Link Folder Google Drive (để upload)"
-                className="input-field text-sm"
+                className="input-field w-full mt-2 text-sm"
+                placeholder="Link Folder Drive"
                 value={driveUrl}
                 onChange={(e) => setDriveUrl(e.target.value)}
               />
@@ -232,16 +300,15 @@ export default function FindImagePage() {
           </div>
         )}
 
-        {/* Gallery Grid */}
-        <div className="grid-gallery">
-          {images.map((src, idx) => (
-            <div key={idx} className="image-card group">
-              <img src={src} alt={`Extracted ${idx}`} loading="lazy" />
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <span className="text-xs text-white bg-black/60 px-2 py-1 rounded">
-                  #{idx + 1}
-                </span>
-              </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {images.map((src, i) => (
+            <div key={i} className="aspect-video relative bg-gray-800">
+              {/* Proxy image for display too, to avoid broken images if strict CORS */}
+              <img
+                src={`/api/proxy-image?url=${encodeURIComponent(src)}`}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
             </div>
           ))}
         </div>

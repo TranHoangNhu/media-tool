@@ -1,25 +1,35 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
+  // Config headers for SharedArrayBuffer (Required by FFmpeg WASM)
+  async headers() {
     return [
       {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+        ],
+      },
+      // CORS for API Routes we built
+      {
         source: "/api/:path*",
-        destination: process.env.BACKEND_URL
-          ? `${process.env.BACKEND_URL}/api/:path*`
-          : "https://api-nextjs.tranhoangnhu.website/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
+        ],
       },
     ];
   },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "1000mb",
-      allowedOrigins: [
-        "localhost:3000",
-        "192.168.1.165:3000",
-        "192.168.0.0/16",
-      ],
-    },
+  // Ensure we can optimize images if needed
+  images: {
+    unoptimized: true,
   },
 };
 
