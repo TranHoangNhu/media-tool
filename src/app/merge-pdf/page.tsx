@@ -35,7 +35,7 @@ export default function MergePdfPage() {
         // Read file as ArrayBuffer
         const buffer = await file.arrayBuffer();
         // Load
-        const pdf = await PDFDocument.load(buffer);
+        const pdf = await PDFDocument.load(buffer, { ignoreEncryption: true });
         // Copy pages
         const copiedPages = await mergedPdf.copyPages(
           pdf,
