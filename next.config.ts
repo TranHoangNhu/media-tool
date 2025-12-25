@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // Only apply strict isolation specific pages that need SharedArrayBuffer (FFmpeg)
+        source: "/compress-video",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
