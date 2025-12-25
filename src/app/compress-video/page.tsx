@@ -27,8 +27,8 @@ export default function CompressVideoPage() {
       const { FFmpeg } = await import("@ffmpeg/ffmpeg");
       const { toBlobURL } = await import("@ffmpeg/util");
 
-      // Use Multi-threaded Core for 3x-4x speed boost
-      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd";
+      // Revert to Single-threaded for stability (Multithread causes crashes on some envs)
+      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
 
@@ -37,7 +37,11 @@ export default function CompressVideoPage() {
       });
 
       ffmpeg.on("progress", ({ progress }) => {
-        setProgress(Math.round(progress * 100));
+        const p =
+          typeof progress === "number"
+            ? progress
+            : (progress as any).ratio || 0;
+        setProgress(Math.round(p * 100));
       });
 
       await ffmpeg.load({
@@ -49,13 +53,9 @@ export default function CompressVideoPage() {
           `${baseURL}/ffmpeg-core.wasm`,
           "application/wasm"
         ),
-        workerURL: await toBlobURL(
-          `${baseURL}/ffmpeg-core.worker.js`,
-          "text/javascript"
-        ),
       });
       setLoaded(true);
-      setStatus("Sẵn sàng! (Chế độ Đa luồng - Tốc độ cao 🚀)");
+      setStatus("Sẵn sàng! (Chế độ ổn định - Client Side)");
     } catch (e) {
       console.error(e);
       setStatus(
