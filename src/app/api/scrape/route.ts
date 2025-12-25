@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       }
     };
 
-    $("body *").each((i, el) => {
+    $("body *").each((i: number, el: any) => {
       if (stopSection) return;
 
       const text = $(el).text().trim().toUpperCase();
