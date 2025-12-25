@@ -49,8 +49,8 @@ export default function Home() {
             </div>
           </Link>
 
-          {/* Card 3: Compress Video */}
-          <Link href="/compress-video" className="group">
+          {/* Card 3: Compress Video - Use standard <a> for hard reload (required for COOP/COEP headers) */}
+          <a href="/compress-video" className="group">
             <div className="glass-panel backdrop-blur-md bg-white/10 p-8 h-full rounded-2xl border border-white/20 transition-all duration-300 hover:bg-white/20 hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] flex flex-col items-center text-center gap-4">
               <div className="w-20 h-20 rounded-full bg-purple-500/30 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
                 🎬
@@ -62,7 +62,7 @@ export default function Home() {
                 Nén video MP4 trực tiếp trên trình duyệt, không giới hạn.
               </p>
             </div>
-          </Link>
+          </a>
         </div>
       </div>
     </main>
