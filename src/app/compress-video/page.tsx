@@ -27,7 +27,8 @@ export default function CompressVideoPage() {
       const { FFmpeg } = await import("@ffmpeg/ffmpeg");
       const { toBlobURL } = await import("@ffmpeg/util");
 
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+      // Use Multi-threaded Core for 3x-4x speed boost
+      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.6/dist/umd";
       const ffmpeg = new FFmpeg();
       ffmpegRef.current = ffmpeg;
 
@@ -48,9 +49,13 @@ export default function CompressVideoPage() {
           `${baseURL}/ffmpeg-core.wasm`,
           "application/wasm"
         ),
+        workerURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.worker.js`,
+          "text/javascript"
+        ),
       });
       setLoaded(true);
-      setStatus("Sẵn sàng! (Sử dụng CPU của bạn để xử lý)");
+      setStatus("Sẵn sàng! (Chế độ Đa luồng - Tốc độ cao 🚀)");
     } catch (e) {
       console.error(e);
       setStatus(
