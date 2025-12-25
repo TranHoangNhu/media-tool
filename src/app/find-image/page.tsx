@@ -146,9 +146,22 @@ export default function FindImagePage() {
       return alert("Google Sign-In chưa tải xong, vui lòng thử lại");
 
     setIsConnecting(true);
-    setStatus("Đang mở popup xác thực... Vui lòng chọn tài khoản Google.");
+    setStatus(
+      "Đang mở popup xác thực... Vui lòng chọn tài khoản và cho phép quyền."
+    );
 
     const authStartTime = Date.now();
+    let resolved = false;
+
+    // Timeout after 60 seconds
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        setIsConnecting(false);
+        setStatus(
+          "⏱️ Hết thời gian chờ. Vui lòng thử lại và hoàn tất xác thực trong popup."
+        );
+      }
+    }, 60000);
 
     try {
       const client = google.accounts.oauth2.initTokenClient({
@@ -156,6 +169,8 @@ export default function FindImagePage() {
         scope: "https://www.googleapis.com/auth/drive.file",
         callback: (resp) => {
           console.log("Google OAuth callback:", resp);
+          resolved = true;
+          clearTimeout(timeout);
           setIsConnecting(false);
 
           if (resp.error) {
@@ -182,6 +197,8 @@ export default function FindImagePage() {
             return;
           }
 
+          resolved = true;
+          clearTimeout(timeout);
           setIsConnecting(false);
           setStatus(`❌ Lỗi OAuth: ${err.type || "unknown"}`);
         },
@@ -189,6 +206,8 @@ export default function FindImagePage() {
       client.requestAccessToken();
     } catch (e) {
       console.error("OAuth exception:", e);
+      resolved = true;
+      clearTimeout(timeout);
       setIsConnecting(false);
       setStatus("❌ Lỗi: " + e.message);
     }
