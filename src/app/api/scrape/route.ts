@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       if (stopSection) return;
 
       const text = $(el).text().trim().toUpperCase();
-      const tagName = $(el).prop("tagName").toLowerCase();
+      const tagName = ($(el).prop("tagName") || "").toLowerCase();
 
       // Start Marker
       if (
