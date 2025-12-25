@@ -39,22 +39,24 @@ export default function FluidBackground() {
       SUNRAYS_WEIGHT: 1.0,
     };
 
-    function pointerPrototype() {
-      this.id = -1;
-      this.texcoordX = 0;
-      this.texcoordY = 0;
-      this.prevTexcoordX = 0;
-      this.prevTexcoordY = 0;
-      this.deltaX = 0;
-      this.deltaY = 0;
-      this.down = false;
-      this.moved = false;
-      this.color = [30, 0, 300];
+    function createPointer() {
+      return {
+        id: -1,
+        texcoordX: 0,
+        texcoordY: 0,
+        prevTexcoordX: 0,
+        prevTexcoordY: 0,
+        deltaX: 0,
+        deltaY: 0,
+        down: false,
+        moved: false,
+        color: [30, 0, 300] as number[],
+      };
     }
 
-    let pointers = [];
-    let splatStack = [];
-    pointers.push(new pointerPrototype());
+    let pointers: ReturnType<typeof createPointer>[] = [];
+    let splatStack: any[] = [];
+    pointers.push(createPointer());
 
     const { gl, ext } = getWebGLContext(canvas);
 
