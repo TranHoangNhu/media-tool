@@ -1,60 +1,65 @@
 import Link from "next/link";
+import FluidBackground from "@/components/FluidBackground";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8 relative bg-background transition-colors duration-300">
-      <div className="z-10 max-w-4xl w-full text-center">
-        <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 pb-2 drop-shadow-sm">
-          Bộ Công Cụ Xử Lý Đa Phương Tiện
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 relative overflow-hidden text-white">
+      {/* Dynamic Background */}
+      <FluidBackground />
+
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-black/30 pointer-events-none -z-0"></div>
+
+      <div className="z-10 max-w-4xl w-full text-center relative">
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 pb-2 drop-shadow-lg animate-fade-in-up">
+          Media Processing Toolkit
         </h1>
-        <p className="text-xl text-slate-600 dark:text-gray-300 mb-12 font-medium">
-          Hệ thống tích hợp xử lý Ảnh, PDF và Video nhanh chóng, hiệu quả
+        <p className="text-xl md:text-2xl text-gray-200 mb-12 font-medium drop-shadow-md">
+          Hệ thống tích hợp xử lý Ảnh, PDF và Video siêu tốc
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl mx-auto">
           {/* Card 1: Find Image */}
           <Link href="/find-image" className="group">
-            <div className="glass-panel p-8 h-full transition-all duration-300 hover:bg-white/80 dark:hover:bg-slate-800/80 cursor-pointer flex flex-col items-center justify-center text-center gap-4 hover:-translate-y-2 hover:shadow-2xl border border-slate-200 dark:border-white/10">
-              <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
+            <div className="glass-panel backdrop-blur-md bg-white/10 p-8 h-full rounded-2xl border border-white/20 transition-all duration-300 hover:bg-white/20 hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] flex flex-col items-center text-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-blue-500/30 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
                 🔍
               </div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+              <h2 className="text-2xl font-bold text-white mb-2">
                 Tìm & Xử Lý Ảnh
               </h2>
-              <p className="text-slate-500 dark:text-gray-400 text-sm">
-                Quét ảnh tour, tự động đóng dấu logo và tối ưu hóa định dạng
-                WebP.
+              <p className="text-gray-300 text-sm">
+                Quét ảnh tour, đóng dấu logo & tối ưu WebP tự động.
               </p>
             </div>
           </Link>
 
           {/* Card 2: Merge PDF */}
           <Link href="/merge-pdf" className="group">
-            <div className="glass-panel p-8 h-full transition-all duration-300 hover:bg-white/80 dark:hover:bg-slate-800/80 cursor-pointer flex flex-col items-center justify-center text-center gap-4 hover:-translate-y-2 hover:shadow-2xl border border-slate-200 dark:border-white/10">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-300 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
+            <div className="glass-panel backdrop-blur-md bg-white/10 p-8 h-full rounded-2xl border border-white/20 transition-all duration-300 hover:bg-white/20 hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(239,68,68,0.5)] flex flex-col items-center text-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-red-500/30 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
                 📄
               </div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
+              <h2 className="text-2xl font-bold text-white mb-2">
                 Ghép File PDF
               </h2>
-              <p className="text-slate-500 dark:text-gray-400 text-sm">
-                Gộp nhiều tài liệu PDF thành một file duy nhất nhanh chóng.
+              <p className="text-gray-300 text-sm">
+                Gộp nhiều tài liệu PDF thành một file duy nhất ngay tức thì.
               </p>
             </div>
           </Link>
 
           {/* Card 3: Compress Video */}
           <Link href="/compress-video" className="group">
-            <div className="glass-panel p-8 h-full transition-all duration-300 hover:bg-white/80 dark:hover:bg-slate-800/80 cursor-pointer flex flex-col items-center justify-center text-center gap-4 hover:-translate-y-2 hover:shadow-2xl border border-slate-200 dark:border-white/10">
-              <div className="w-16 h-16 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-300 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform shadow-sm">
+            <div className="glass-panel backdrop-blur-md bg-white/10 p-8 h-full rounded-2xl border border-white/20 transition-all duration-300 hover:bg-white/20 hover:-translate-y-2 hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] flex flex-col items-center text-center gap-4">
+              <div className="w-20 h-20 rounded-full bg-purple-500/30 flex items-center justify-center text-4xl mb-2 group-hover:scale-110 transition-transform">
                 🎬
               </div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white">
-                Nén Video Online
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Nén Video WASM
               </h2>
-              <p className="text-slate-500 dark:text-gray-400 text-sm">
-                Giảm dung lượng Video MP4 thông minh, giữ nguyên chất lượng hiển
-                thị.
+              <p className="text-gray-300 text-sm">
+                Nén video MP4 trực tiếp trên trình duyệt, không giới hạn.
               </p>
             </div>
           </Link>
