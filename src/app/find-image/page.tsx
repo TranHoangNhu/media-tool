@@ -146,7 +146,9 @@ export default function FindImagePage() {
       return alert("Google Sign-In chưa tải xong, vui lòng thử lại");
 
     setIsConnecting(true);
-    setStatus("Đang mở popup xác thực...");
+    setStatus("Đang mở popup xác thực... Vui lòng chọn tài khoản Google.");
+
+    const authStartTime = Date.now();
 
     try {
       const client = google.accounts.oauth2.initTokenClient({
@@ -171,8 +173,17 @@ export default function FindImagePage() {
         },
         error_callback: (err) => {
           console.error("OAuth error_callback:", err);
+          const elapsed = Date.now() - authStartTime;
+
+          // Ignore popup_closed if it happens too quickly (false positive)
+          if (err.type === "popup_closed" && elapsed < 5000) {
+            console.log("Ignoring premature popup_closed, elapsed:", elapsed);
+            // Don't set error, user is still interacting
+            return;
+          }
+
           setIsConnecting(false);
-          setStatus(`❌ Lỗi OAuth: ${err.type || "popup_closed_by_user"}`);
+          setStatus(`❌ Lỗi OAuth: ${err.type || "unknown"}`);
         },
       });
       client.requestAccessToken();
