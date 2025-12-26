@@ -46,7 +46,7 @@ export default function CompressVideoPage() {
           </p>
 
           <a
-            href="https://github.com/TranHoangNhu/media-tool/releases/download/v1.0.0/MediaTool-Setup.zip"
+            href="/downloads/MediaTool-Setup.zip"
             className="w-full block py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded-xl font-bold text-white shadow-lg shadow-purple-900/40 active:translate-y-1 transition-all"
           >
             ⬇️ Tải Ngay (ZIP)
