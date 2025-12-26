@@ -1,14 +1,14 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 // Disable SSG
 export const dynamic = "force-dynamic";
 
-export default function CompressVideoPage() {
+function CompressVideoContent() {
   const searchParams = useSearchParams();
   const isDesktop = searchParams.get("app") === "desktop";
 
@@ -254,5 +254,19 @@ export default function CompressVideoPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CompressVideoPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-white">
+          Loading...
+        </div>
+      }
+    >
+      <CompressVideoContent />
+    </Suspense>
   );
 }
