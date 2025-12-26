@@ -161,8 +161,7 @@ export default function CompressVideoPage() {
 
     try {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "http://localhost:3001/compress-video", true);
-      xhr.responseType = "blob";
+      xhr.open("POST", "http://localhost:3001/upload", true);
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -174,16 +173,49 @@ export default function CompressVideoPage() {
 
       xhr.onload = () => {
         if (xhr.status === 200) {
-          const blob = xhr.response;
-          const url = URL.createObjectURL(blob);
-          setOutputBlobUrl(url);
-          setStatus("Nén thành công bằng Server!");
-          setProgress(100);
+          try {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success && response.jobId) {
+              setStatus("Đang xử lý trên Server (0%)...");
+              setUploadProgress(100);
+
+              // Start Polling Loop
+              const jobId = response.jobId;
+              const poll = setInterval(async () => {
+                try {
+                  const res = await fetch(
+                    `http://localhost:3001/status/${jobId}`
+                  );
+                  const job = await res.json();
+
+                  if (job.status === "processing") {
+                    setProgress(job.progress);
+                    setStatus(`Server đang xử lý... ${job.progress}%`);
+                  } else if (job.status === "completed") {
+                    clearInterval(poll);
+                    setProgress(100);
+                    setOutputBlobUrl(job.downloadUrl);
+                    setStatus("Nén thành công bằng Server!");
+                    setIsCompressing(false);
+                  } else if (job.status === "failed") {
+                    clearInterval(poll);
+                    setStatus(`Lỗi xử lý: ${job.error}`);
+                    setIsCompressing(false);
+                  }
+                } catch (err) {
+                  console.error("Polling error:", err);
+                }
+              }, 1000);
+            }
+          } catch (e) {
+            setStatus("Lỗi phản hồi từ Server");
+            setIsCompressing(false);
+          }
         } else {
           setStatus("Lỗi từ Server: " + xhr.statusText);
           alert("Đảm bảo bạn đã chạy 'node server.js' ở thư mục backend!");
+          setIsCompressing(false);
         }
-        setIsCompressing(false);
       };
 
       xhr.onerror = () => {
