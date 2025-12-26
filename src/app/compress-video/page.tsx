@@ -141,74 +141,211 @@ export default function CompressVideoPage() {
     }
   };
 
+  const [processingMode, setProcessingMode] = useState<"wasm" | "server">(
+    "server"
+  ); // Default to Server for speed
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // ... (giữ nguyên code cũ của WASM load/useEffect) ...
+
+  const compressWithServer = async () => {
+    if (!videoFile) return;
+
+    setStatus("Đang tải video lên Server Local...");
+    setIsCompressing(true);
+    setProgress(0);
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append("video", videoFile);
+
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "http://localhost:3001/compress-video", true);
+      xhr.responseType = "blob";
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded / event.total) * 100);
+          setUploadProgress(percent);
+          setStatus(`Đang tải lên... ${percent}%`);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = xhr.response;
+          const url = URL.createObjectURL(blob);
+          setOutputBlobUrl(url);
+          setStatus("Nén thành công bằng Server!");
+          setProgress(100);
+        } else {
+          setStatus("Lỗi từ Server: " + xhr.statusText);
+          alert("Đảm bảo bạn đã chạy 'node server.js' ở thư mục backend!");
+        }
+        setIsCompressing(false);
+      };
+
+      xhr.onerror = () => {
+        setStatus("Không thể kết nối Server Local (http://localhost:3001)");
+        alert("Hãy chạy lệnh 'npm start' trong thư mục backend trước!");
+        setIsCompressing(false);
+      };
+
+      xhr.send(formData);
+    } catch (e) {
+      console.error(e);
+      setStatus("Lỗi kết nối!");
+      setIsCompressing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen p-8 bg-[var(--background)]">
       <div className="max-w-4xl mx-auto">
         <Link href="/" className="text-gray-400 mb-6 inline-block">
           ← Quay lại
         </Link>
-        <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-500">
-          Nén Video (Client-side WASM)
+        <h1 className="text-4xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-500">
+          Nén Video Pro
         </h1>
 
-        {!loaded ? (
-          <div className="text-center p-8 glass-panel animate-pulse">
-            {isLoadingCore
-              ? "Đang tải bộ xử lý FFmpeg (Lần đầu sẽ mất ~20s)..."
-              : status || "Đang khởi tạo..."}
+        {/* Mode Selection */}
+        <div className="flex gap-4 mb-8 bg-white/5 p-1 rounded-xl w-fit mx-auto">
+          <button
+            onClick={() => setProcessingMode("server")}
+            className={`px-6 py-2 rounded-lg transition-all ${
+              processingMode === "server"
+                ? "bg-purple-600 text-white shadow-lg"
+                : "hover:bg-white/10 text-gray-400"
+            }`}
+          >
+            🚀 Server Local (Siêu Tốc)
+          </button>
+          <button
+            onClick={() => setProcessingMode("wasm")}
+            className={`px-6 py-2 rounded-lg transition-all ${
+              processingMode === "wasm"
+                ? "bg-purple-600 text-white shadow-lg"
+                : "hover:bg-white/10 text-gray-400"
+            }`}
+          >
+            🌐 Browser (Không cài đặt)
+          </button>
+        </div>
+
+        <div className="glass-panel p-8 mb-8 text-center border-dashed border-2 hover:border-purple-500 relative transition-all">
+          <input
+            type="file"
+            accept="video/mp4,video/mov,video/avi"
+            onChange={(e) =>
+              setVideoFile(e.target.files ? e.target.files[0] : null)
+            }
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          <h3 className="text-xl font-semibold mb-2">
+            {videoFile ? videoFile.name : "Chọn Video để nén"}
+          </h3>
+          <p className="text-sm text-gray-400">
+            {processingMode === "server"
+              ? "Hỗ trợ mọi định dạng (MP4, AVI, MOV...)"
+              : "Hỗ trợ tốt nhất MP4"}
+          </p>
+        </div>
+
+        {/* Progress UI */}
+        {isCompressing && (
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-1 text-gray-400">
+              <span>
+                {processingMode === "server"
+                  ? uploadProgress < 100
+                    ? "Đang tải lên..."
+                    : "Server đang xử lý..."
+                  : "Đang nén trên Browser..."}
+              </span>
+              <span>
+                {processingMode === "server" && uploadProgress < 100
+                  ? `${uploadProgress}%`
+                  : `${progress}%`}
+              </span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="bg-purple-600 h-full transition-all duration-300 relative"
+                style={{
+                  width: `${
+                    processingMode === "server" && uploadProgress < 100
+                      ? uploadProgress
+                      : progress
+                  }%`,
+                }}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 bg-white/20 animate-[shimmer_1s_infinite] skew-x-12"></div>
+              </div>
+            </div>
           </div>
-        ) : (
-          <>
-            <div className="glass-panel p-8 mb-8 text-center border-dashed border-2 hover:border-purple-500 relative">
-              <input
-                type="file"
-                accept="video/mp4,video/mov"
-                onChange={(e) =>
-                  setVideoFile(e.target.files ? e.target.files[0] : null)
+        )}
+
+        <div className="text-center text-green-400 font-bold mb-4 min-h-[24px]">
+          {status}
+        </div>
+
+        <button
+          onClick={processingMode === "server" ? compressWithServer : compress}
+          disabled={
+            !videoFile ||
+            isCompressing ||
+            (processingMode === "wasm" && !loaded)
+          }
+          className={`primary-btn w-full h-12 font-bold text-lg shadow-lg shadow-purple-900/20 active:scale-95 transition-all
+                ${
+                  !videoFile || isCompressing
+                    ? "opacity-50 cursor-not-allowed grayscale"
+                    : "bg-gradient-to-r from-purple-600 to-indigo-600 hover:shadow-purple-600/40"
                 }
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            `}
+        >
+          {isCompressing
+            ? "Đang xử lý..."
+            : processingMode === "server"
+            ? "Nén Tốc Độ Cao (Local)"
+            : "Nén Bằng JS (Browser)"}
+        </button>
+
+        {/* Output Section */}
+        {outputBlobUrl && (
+          <div className="mt-8 p-6 bg-slate-900/50 border border-white/10 rounded-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              ✅ Kết quả thành công
+            </h3>
+            <div className="rounded-xl overflow-hidden bg-black mb-4 aspect-video">
+              <video
+                controls
+                src={outputBlobUrl}
+                className="w-full h-full object-contain"
               />
-              <h3 className="text-xl font-semibold">
-                {videoFile ? videoFile.name : "Chọn Video MP4"}
-              </h3>
             </div>
-
-            {isCompressing && (
-              <div className="w-full bg-gray-700 rounded-full h-2.5 mb-4">
-                <div
-                  className="bg-purple-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                ></div>
-                <p className="text-right text-xs mt-1">{progress}%</p>
-              </div>
-            )}
-
-            <div className="text-center text-green-400 font-bold mb-4">
-              {status}
-            </div>
-
-            <button
-              onClick={compress}
-              disabled={!videoFile || (progress > 0 && progress < 100)}
-              className="primary-btn w-full bg-gradient-to-r from-purple-600 to-indigo-600"
+            <a
+              href={outputBlobUrl}
+              download={`compressed_${videoFile?.name || "video"}`}
+              className="primary-btn block text-center bg-green-600 hover:bg-green-500 w-full"
             >
-              Nén Ngay
-            </button>
+              ⬇️ Tải Video Mới
+            </a>
+          </div>
+        )}
 
-            {outputBlobUrl && (
-              <div className="mt-8 p-4 bg-slate-900 rounded-xl">
-                <h3 className="text-lg mb-2">Kết quả:</h3>
-                <video controls src={outputBlobUrl} className="w-full mb-4" />
-                <a
-                  href={outputBlobUrl}
-                  download={`compressed_${videoFile?.name}`}
-                  className="primary-btn block text-center bg-green-600"
-                >
-                  Tải Xuống
-                </a>
-              </div>
-            )}
-          </>
+        {/* WASM Status Footer */}
+        {processingMode === "wasm" && (
+          <div className="mt-8 text-center text-xs text-gray-500">
+            {!loaded
+              ? isLoadingCore
+                ? "Đang tải Core..."
+                : "Chưa tải xong FFmpeg"
+              : "FFmpeg WASM sẵn sàng"}
+          </div>
         )}
       </div>
     </div>
